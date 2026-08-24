@@ -1,0 +1,52 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Plane Cell Count: 10
+      Cell Size: 0.1
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: true
+      Show Axes: true
+      Show Arrows: false
+    - Class: rviz_default_plugins/Marker
+      Name: Ball
+      Enabled: true
+      Topic:
+        Value: /ball_marker
+    - Class: rviz_default_plugins/Pose
+      Name: Platform pose
+      Enabled: true
+      Topic:
+        Value: /platform_pose_stamped
+      Shape: Axes
+    - Class: rviz_default_plugins/Image
+      Name: Debug image
+      Enabled: true
+      Topic:
+        Value: /debug_image
+  Global Options:
+    Fixed Frame: camera_link
+    Background Color: 30; 30; 30
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.0
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+Window Geometry:
+  Height: 900
+  Width: 1400

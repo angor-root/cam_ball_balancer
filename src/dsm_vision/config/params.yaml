@@ -1,0 +1,33 @@
+# Tuning knobs for both nodes. Load with:
+#   ros2 run dsm_vision ball_tracker_node --ros-args --params-file config/params.yaml
+# or reference it from launch/dsm_vision.launch.py (the default).
+#
+# NOTHING here has been validated against the real camera/plate/ball —
+# tune hsv_lower/hsv_upper with the real ball (there's no
+# scripts/tune_hsv.py helper yet, but cv2.createTrackbar over the HSV
+# mask in ball_tracker.BallDetector.detect() is the standard way to do
+# this interactively once the camera arrives), and corner_positions_m /
+# marker_length_m against the actual printed plate.
+
+ball_tracker_node:
+  ros__parameters:
+    image_topic: "image_raw"
+    # Default targets a bright orange ball. Tune once real footage exists.
+    hsv_lower: [5, 120, 120]
+    hsv_upper: [18, 255, 255]
+    min_radius_px: 4.0
+    max_radius_px: 200.0
+    max_consecutive_misses: 15
+    publish_debug_image: true
+
+platform_pose_node:
+  ros__parameters:
+    image_topic: "image_raw"
+    plate_frame_id: "plate_link"
+    marker_length_m: 0.03
+    corner_marker_ids: [0, 1, 2, 3]
+    # Flattened [x0,y0, x1,y1, x2,y2, x3,y3], meters, plate frame
+    # (image-aligned: Y grows the same direction as image row/v — see
+    # platform_pose.py docstring). Order: TL, TR, BR, BL.
+    corner_positions_m: [-0.09, -0.09, 0.09, -0.09, 0.09, 0.09, -0.09, 0.09]
+    publish_tf: true

@@ -1,13 +1,13 @@
 import numpy as np
 import cv2
 
-from dsm_vision.platform_pose import (
+from cam_ball_balancer.platform_pose import (
     PlatformPoseEstimator,
     PlatformPoseConfig,
     CameraIntrinsics,
     _tilt_angles_from_rvec,
 )
-from dsm_vision.synthetic import (
+from cam_ball_balancer.synthetic import (
     render_plate_with_markers,
     SyntheticPlateConfig,
     render_plate_with_markers_perspective,

@@ -106,7 +106,7 @@ def run_interactive(args, inner_size, square_size_m):
             cv2.drawChessboardCorners(display, inner_size, corners, True)
         cv2.putText(display, f"capturas: {len(object_points_list)}", (10, 24),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.imshow("calibrate_camera - dsm_vision", display)
+        cv2.imshow("calibrate_camera - cam_ball_balancer", display)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord(" ") and corners is not None:

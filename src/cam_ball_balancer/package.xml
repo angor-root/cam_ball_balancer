@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>dsm_vision</name>
+  <name>cam_ball_balancer</name>
   <version>0.1.0</version>
   <description>
     MT5001 DSM project — ball-on-plate vision: ball position (color
@@ -20,7 +20,7 @@
   <depend>std_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>cv_bridge</depend>
-  <depend>dsm_vision_msgs</depend>
+  <depend>cam_ball_balancer_msgs</depend>
   <exec_depend>python3-opencv</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
 

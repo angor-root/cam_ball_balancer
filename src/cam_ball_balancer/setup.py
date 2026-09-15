@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = "dsm_vision"
+package_name = "cam_ball_balancer"
 
 setup(
     name=package_name,
@@ -23,8 +23,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "ball_tracker_node = dsm_vision.ball_tracker_node:main",
-            "platform_pose_node = dsm_vision.platform_pose_node:main",
+            "ball_tracker_node = cam_ball_balancer.ball_tracker_node:main",
+            "platform_pose_node = cam_ball_balancer.platform_pose_node:main",
         ],
     },
 )

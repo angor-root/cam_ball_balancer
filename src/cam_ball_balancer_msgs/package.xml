@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>dsm_vision_msgs</name>
+  <name>cam_ball_balancer_msgs</name>
   <version>0.1.0</version>
   <description>Message definitions for the DSM (MT5001) vision subsystem: ball position and platform pose.</description>
   <maintainer email="caleb.churata@utec.edu.pe">Caleb Churata</maintainer>

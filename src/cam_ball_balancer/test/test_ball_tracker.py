@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from dsm_vision.ball_tracker import BallTracker, TrackState
-from dsm_vision.synthetic import generate_ball_sequence
+from cam_ball_balancer.ball_tracker import BallTracker, TrackState
+from cam_ball_balancer.synthetic import generate_ball_sequence
 
 
 def test_tracks_moving_ball_within_tolerance():

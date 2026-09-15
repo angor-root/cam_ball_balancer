@@ -13,7 +13,7 @@ antes de asumir uno u otro -- ver README.
 
     python3 scripts/publish_camera.py --camera-index 0
     # en otra terminal:
-    ros2 launch dsm_vision dsm_vision.launch.py image_topic:=/camera/image_raw
+    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/camera/image_raw
 """
 import argparse
 import time

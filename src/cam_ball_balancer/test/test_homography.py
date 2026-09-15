@@ -1,6 +1,6 @@
 import numpy as np
 
-from dsm_vision.homography import PixelToPlaneMapper
+from cam_ball_balancer.homography import PixelToPlaneMapper
 
 
 def test_rectangular_plate_round_trip():

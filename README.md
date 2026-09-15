@@ -1,4 +1,4 @@
-# dsm_vision
+# cam_ball_balancer
 
 Vision subsystem for the MT5001 (DSM) ball-on-plate robot: a differential-drive
 mobile base carrying a 2-DOF tiltable plate that has to balance a ball.
@@ -22,7 +22,7 @@ ROS2 stack once it exists.
 
 Repo moved out of `~/curso_mecatronica_pcb/` (a different course's
 folder it was nested under) into its own top-level location and pushed
-public: https://github.com/angor-root/dsm_vision (MIT license).
+public: https://github.com/angor-root/cam_ball_balancer (MIT license).
 
 **Design decision: state machine, not a neural network, for ball-detection
 noise.** The real camera showed intermittent bad detections (lighting
@@ -82,11 +82,11 @@ done — camera capture path is proven, calibration is not).
 This repo *is* a colcon workspace (not just one package):
 
 ```
-dsm_vision/
+cam_ball_balancer/
 ├── src/
-│   ├── dsm_vision_msgs/     # BallPosition.msg, PlatformPose.msg (ament_cmake)
-│   └── dsm_vision/          # the actual package (ament_python)
-│       ├── dsm_vision/
+│   ├── cam_ball_balancer_msgs/     # BallPosition.msg, PlatformPose.msg (ament_cmake)
+│   └── cam_ball_balancer/          # the actual package (ament_python)
+│       ├── cam_ball_balancer/
 │       │   ├── ball_tracker.py      # detector + Kalman, ROS-free
 │       │   ├── kalman.py            # constant-velocity 2D Kalman filter
 │       │   ├── platform_pose.py     # ArUco corner tags -> plate pose, ROS-free
@@ -94,7 +94,7 @@ dsm_vision/
 │       │   ├── synthetic.py         # test data generators (no hardware needed)
 │       │   ├── ball_tracker_node.py     # ROS2 wrapper
 │       │   └── platform_pose_node.py    # ROS2 wrapper
-│       ├── launch/dsm_vision.launch.py
+│       ├── launch/cam_ball_balancer.launch.py
 │       ├── config/{params.yaml, rviz.rviz}
 │       └── test/             # pytest, all ROS-free
 └── scripts/publish_synthetic_video.py   # feeds fake frames over ROS2 for a full demo
@@ -103,7 +103,7 @@ dsm_vision/
 ## Quickstart — no ROS, no camera (core algorithm only)
 
 ```bash
-cd src/dsm_vision
+cd src/cam_ball_balancer
 python3 -m pip install --user opencv-python numpy pytest   # or use your distro's python3-opencv
 PYTHONPATH=. python3 -m pytest test/ -v
 ```
@@ -129,7 +129,7 @@ source install/setup.bash
 
 # Full demo with zero hardware: synthetic ball+plate video over ROS2
 python3 scripts/publish_synthetic_video.py &
-ros2 launch dsm_vision dsm_vision.launch.py image_topic:=/synthetic/image_raw
+ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/synthetic/image_raw
 ```
 
 RViz should open with the debug camera view, the ball as an orange
@@ -141,15 +141,15 @@ instead (e.g. `usb_cam`'s `/image_raw`, or a CSI driver's topic).
 
 | Topic | Type | From |
 |---|---|---|
-| `ball_position` | `dsm_vision_msgs/BallPosition` (x, y, t via header, valid) | ball_tracker_node |
+| `ball_position` | `cam_ball_balancer_msgs/BallPosition` (x, y, t via header, valid) | ball_tracker_node |
 | `ball_marker` | `visualization_msgs/Marker` | ball_tracker_node |
 | `debug_image` | `sensor_msgs/Image` | ball_tracker_node |
-| `platform_pose` | `dsm_vision_msgs/PlatformPose` (θx, θy, tx/ty/tz, valid) | platform_pose_node |
+| `platform_pose` | `cam_ball_balancer_msgs/PlatformPose` (θx, θy, tx/ty/tz, valid) | platform_pose_node |
 | `platform_pose_stamped` | `geometry_msgs/PoseStamped` | platform_pose_node |
 | `tf`: `camera_link -> plate_link` | | platform_pose_node |
 
 Both nodes use **relative** topic names on purpose. Run them under a
-launch-time namespace (e.g. `namespace="dsm_vision"`) once they're
+launch-time namespace (e.g. `namespace="cam_ball_balancer"`) once they're
 folded into the full robot's launch files, and everything above gets
 prefixed automatically — no code changes needed here. That's the
 integration hook for the differential-drive base later.

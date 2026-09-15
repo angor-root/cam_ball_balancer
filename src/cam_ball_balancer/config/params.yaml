@@ -1,6 +1,6 @@
 # Tuning knobs for both nodes. Load with:
-#   ros2 run dsm_vision ball_tracker_node --ros-args --params-file config/params.yaml
-# or reference it from launch/dsm_vision.launch.py (the default).
+#   ros2 run cam_ball_balancer ball_tracker_node --ros-args --params-file config/params.yaml
+# or reference it from launch/cam_ball_balancer.launch.py (the default).
 #
 # NOTHING here has been validated against the real camera/plate/ball —
 # tune hsv_lower/hsv_upper with the real ball (there's no

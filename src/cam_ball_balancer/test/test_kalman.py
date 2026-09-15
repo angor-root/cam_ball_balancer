@@ -1,6 +1,6 @@
 import numpy as np
 
-from dsm_vision.kalman import ConstantVelocityKalman2D
+from cam_ball_balancer.kalman import ConstantVelocityKalman2D
 
 
 def test_converges_to_constant_velocity_line():

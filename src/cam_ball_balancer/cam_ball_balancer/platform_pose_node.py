@@ -2,7 +2,7 @@
 
 Publishes (relative names — see ball_tracker_node.py's docstring for
 why, and how to namespace this for the full robot later):
-  platform_pose          (dsm_vision_msgs/PlatformPose)
+  platform_pose          (cam_ball_balancer_msgs/PlatformPose)
   platform_pose_stamped  (geometry_msgs/PoseStamped)  -- for RViz / other consumers
 and broadcasts a TF transform camera_frame -> plate_frame, so the plate's
 pose is available on the standard ROS2 TF tree — this is the hook meant
@@ -23,19 +23,19 @@ from cv_bridge import CvBridge
 from tf2_ros import TransformBroadcaster
 from ament_index_python.packages import get_package_share_directory
 
-from dsm_vision_msgs.msg import PlatformPose as PlatformPoseMsg
+from cam_ball_balancer_msgs.msg import PlatformPose as PlatformPoseMsg
 
 from .platform_pose import PlatformPoseEstimator, PlatformPoseConfig, CameraIntrinsics
 
 
 def _default_intrinsics_path() -> str:
-    """Ruta al .npz calibrado dentro del paquete instalado (share/dsm_vision/
+    """Ruta al .npz calibrado dentro del paquete instalado (share/cam_ball_balancer/
     config/), el mismo config/ donde ya viven params.yaml y rviz.rviz (ver
     setup.py -- data_files hace glob("config/*"), por eso camera_intrinsics.npz
     solo aparece ahi despues de un `colcon build` que lo recoja).
     """
     try:
-        share_dir = get_package_share_directory("dsm_vision")
+        share_dir = get_package_share_directory("cam_ball_balancer")
     except Exception:
         return ""
     return os.path.join(share_dir, "config", "camera_intrinsics.npz")

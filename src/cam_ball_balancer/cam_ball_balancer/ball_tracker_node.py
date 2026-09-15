@@ -1,14 +1,14 @@
 """ROS2 node: wraps BallTracker around a camera topic.
 
 Publishes (relative names — see below):
-  ball_position   (dsm_vision_msgs/BallPosition)
+  ball_position   (cam_ball_balancer_msgs/BallPosition)
   ball_marker     (visualization_msgs/Marker)   -- for RViz
   debug_image     (sensor_msgs/Image)           -- annotated, for rqt_image_view
 
 All topic names here are relative on purpose: run standalone they show
 up as /ball_position etc., but this is meant to be one node among
 several on the eventual differential-drive robot — launch it with
-`namespace="dsm_vision"` (or whatever the robot's launch file uses) and
+`namespace="cam_ball_balancer"` (or whatever the robot's launch file uses) and
 every topic above gets prefixed automatically, no code changes needed.
 The published Marker/debug image reuse whatever `frame_id` the incoming
 camera image carries, so a future robot_state_publisher + static camera
@@ -22,7 +22,7 @@ from sensor_msgs.msg import Image
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge
 
-from dsm_vision_msgs.msg import BallPosition
+from cam_ball_balancer_msgs.msg import BallPosition
 
 from .ball_tracker import BallTracker, BallDetectorConfig
 from .kalman import KalmanConfig
@@ -82,7 +82,7 @@ class BallTrackerNode(Node):
 
         marker = Marker()
         marker.header = msg.header
-        marker.ns = "dsm_vision/ball"
+        marker.ns = "cam_ball_balancer/ball"
         marker.id = 0
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD if result.valid else Marker.DELETE

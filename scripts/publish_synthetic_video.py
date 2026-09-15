@@ -2,14 +2,14 @@
 """Publishes the synthetic ball+plate sequence as a ROS2 image topic, so
 the two nodes (and RViz) can be exercised end-to-end with zero hardware.
 
-    ros2 run --prefix 'python3' dsm_vision  # not installed as an entry
+    ros2 run --prefix 'python3' cam_ball_balancer  # not installed as an entry
     point on purpose (it's a dev tool, not part of the package) — run it
     directly instead:
 
     python3 scripts/publish_synthetic_video.py
 
 Then, in another terminal:
-    ros2 launch dsm_vision dsm_vision.launch.py image_topic:=/synthetic/image_raw
+    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/synthetic/image_raw
 """
 import time
 
@@ -20,9 +20,9 @@ from cv_bridge import CvBridge
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "dsm_vision"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "cam_ball_balancer"))
 
-from dsm_vision.synthetic import generate_ball_sequence, render_plate_with_markers, SyntheticPlateConfig  # noqa: E402
+from cam_ball_balancer.synthetic import generate_ball_sequence, render_plate_with_markers, SyntheticPlateConfig  # noqa: E402
 
 
 def main():

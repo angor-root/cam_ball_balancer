@@ -1,8 +1,8 @@
 """Brings up both vision nodes (+ optionally RViz) with the shared params.
 
-    ros2 launch dsm_vision dsm_vision.launch.py
-    ros2 launch dsm_vision dsm_vision.launch.py rviz:=false
-    ros2 launch dsm_vision dsm_vision.launch.py image_topic:=/camera/image_raw
+    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py
+    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py rviz:=false
+    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/camera/image_raw
 
 Both nodes are launched under their own default node name (ball_tracker_node,
 platform_pose_node) so their topics match config/params.yaml as-is; pass a
@@ -17,7 +17,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    pkg_share = FindPackageShare("dsm_vision")
+    pkg_share = FindPackageShare("cam_ball_balancer")
     default_params = PathJoinSubstitution([pkg_share, "config", "params.yaml"])
     default_rviz = PathJoinSubstitution([pkg_share, "config", "rviz.rviz"])
 
@@ -35,7 +35,7 @@ def generate_launch_description():
     )
 
     ball_tracker_node = Node(
-        package="dsm_vision",
+        package="cam_ball_balancer",
         executable="ball_tracker_node",
         name="ball_tracker_node",
         output="screen",
@@ -45,7 +45,7 @@ def generate_launch_description():
     )
 
     platform_pose_node = Node(
-        package="dsm_vision",
+        package="cam_ball_balancer",
         executable="platform_pose_node",
         name="platform_pose_node",
         output="screen",

@@ -14,6 +14,7 @@ predicting through frames where detection fails.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 import cv2
@@ -21,6 +22,31 @@ import numpy as np
 
 from .kalman import ConstantVelocityKalman2D, KalmanConfig
 from .homography import PixelToPlaneMapper
+
+
+class TrackState(Enum):
+    """Explicit track lifecycle, so noisy/intermittent detections (motion
+    blur, lighting glare, brief occlusion) are handled the same way every
+    time instead of by a single ad-hoc miss counter.
+
+    SEARCHING -> no track yet; any detection (ungated, nothing to compare
+                 against) starts one.
+    TRACKING  -> track established; only detections that pass the Kalman
+                 gate update it, so an outlier (e.g. a reflection) can't
+                 yank the estimate.
+    COASTING  -> a frame or few had no accepted detection; keep reporting
+                 the Kalman prediction (still "valid") instead of dropping
+                 output, but don't extend this indefinitely.
+    LOST      -> too many consecutive misses; stop trusting the stale
+                 extrapolation and require a fresh, ungated detection to
+                 re-acquire (avoids drifting far from reality and then
+                 snapping badly once the ball reappears).
+    """
+
+    SEARCHING = "searching"
+    TRACKING = "tracking"
+    COASTING = "coasting"
+    LOST = "lost"
 
 
 @dataclass
@@ -53,6 +79,10 @@ class BallMeasurement:
     valid: bool
     pixel: Optional[tuple[float, float]] = None
     radius_px: Optional[float] = None
+    # Diagnostic only — NOT part of the frozen obtener_posicion_pelota()
+    # contract (x, y, t, valido). Useful for logging/debugging why a given
+    # frame was (in)valid; consumers should keep depending on `valid` alone.
+    state: str = ""
 
 
 class BallDetector:
@@ -109,14 +139,33 @@ class BallTracker:
         kalman_config: KalmanConfig | None = None,
         plane_mapper: Optional[PixelToPlaneMapper] = None,
         max_consecutive_misses: int = 15,
+        gate_max_speed: float = 3000.0,
+        gate_min_jump: float = 40.0,
     ):
         self.detector = BallDetector(detector_config)
         self.kalman = ConstantVelocityKalman2D(kalman_config)
         self.plane_mapper = plane_mapper
         self.max_consecutive_misses = max_consecutive_misses
+        # Kinematic outlier gate, in tracker output units (pixels in the
+        # no-plane_mapper fallback, plate units once one is configured):
+        # a detection is only accepted if it's within `gate_min_jump +
+        # gate_max_speed * dt` of the current prediction. This is
+        # deliberately NOT a statistical (Mahalanobis) gate against the
+        # Kalman's own P — the constant-velocity model systematically
+        # lags on curved motion (see KalmanConfig), so P underestimates
+        # real per-frame residuals and a statistical gate ends up
+        # rejecting good detections, not just outliers. A plain "how far
+        # could the ball plausibly have moved" bound is more robust and
+        # easier to tune against the real plate size/ball speed once
+        # known. `gate_min_jump` is slack for near-zero-speed jitter;
+        # `gate_max_speed` should be set comfortably above the ball's real
+        # max speed once that's known (defaults generous for bring-up).
+        self.gate_max_speed = gate_max_speed
+        self.gate_min_jump = gate_min_jump
 
         self._last_t: Optional[float] = None
         self._misses = 0
+        self.state = TrackState.SEARCHING
 
     def _to_output_coords(self, u: float, v: float) -> tuple[float, float]:
         if self.plane_mapper is not None:
@@ -134,31 +183,66 @@ class BallTracker:
         self.kalman.predict(dt)
 
         detection = self.detector.detect(frame_bgr)
+        accepted = False
 
         if detection is not None:
             u, v, radius = detection
             x, y = self._to_output_coords(u, v)
-            self.kalman.update(x, y)
+            if not self.kalman.initialized:
+                # SEARCHING -> TRACKING: no prior track to gate against.
+                self.kalman.update(x, y)
+                accepted = True
+            else:
+                pred_x, pred_y = self.kalman.position
+                jump = float(np.hypot(x - pred_x, y - pred_y))
+                allowed = self.gate_min_jump + self.gate_max_speed * dt
+                if jump <= allowed:
+                    self.kalman.update(x, y)
+                    accepted = True
+            # else: rejected as an outlier (e.g. a lighting reflection the
+            # HSV mask briefly latched onto) — treated exactly like a
+            # missing detection below, so the filter coasts instead of
+            # jumping to a point the ball almost certainly isn't at.
+        else:
+            u = v = radius = None
+
+        if accepted:
             self._misses = 0
         else:
             self._misses += 1
-            u = v = radius = None
 
         if not self.kalman.initialized:
-            return BallMeasurement(x=float("nan"), y=float("nan"), t=timestamp, valid=False)
+            self.state = TrackState.TRACKING if accepted else TrackState.SEARCHING
+        elif accepted:
+            self.state = TrackState.TRACKING
+        elif self._misses > self.max_consecutive_misses:
+            self.state = TrackState.LOST
+            # Stop trusting the stale extrapolation — require a fresh,
+            # ungated detection to re-acquire rather than snapping from
+            # wherever a long coast drifted to.
+            self.kalman.initialized = False
+        else:
+            self.state = TrackState.COASTING
 
-        track_lost = self._misses > self.max_consecutive_misses
+        if not self.kalman.initialized:
+            return BallMeasurement(
+                x=float("nan"), y=float("nan"), t=timestamp, valid=False,
+                state=self.state.value,
+            )
+
         fx, fy = self.kalman.position
         return BallMeasurement(
             x=fx,
             y=fy,
             t=timestamp,
-            valid=not track_lost,
-            pixel=(u, v) if detection is not None else None,
-            radius_px=radius,
+            valid=self.state != TrackState.LOST,
+            pixel=(u, v) if accepted else None,
+            radius_px=radius if accepted else None,
+            state=self.state.value,
         )
 
     def reset(self) -> None:
         self.kalman = ConstantVelocityKalman2D(self.kalman.config)
         self._last_t = None
         self._misses = 0
+        self.state = TrackState.SEARCHING

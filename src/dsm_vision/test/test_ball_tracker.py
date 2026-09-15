@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from dsm_vision.ball_tracker import BallTracker
+from dsm_vision.ball_tracker import BallTracker, TrackState
 from dsm_vision.synthetic import generate_ball_sequence
 
 
@@ -47,3 +47,31 @@ def test_track_lost_after_long_occlusion():
     for t, frame, _ in seq:
         last_valid = tracker.update(frame, t).valid
     assert last_valid is False
+
+
+def test_gates_out_a_lighting_glare_outlier():
+    """A single wildly-off detection (e.g. a reflection the HSV mask
+    briefly latches onto) must not yank the filter to that point — it
+    should be rejected by the Mahalanobis gate and treated like a miss,
+    with the reported position staying close to the established track."""
+    tracker = BallTracker(max_consecutive_misses=15)
+    seq = generate_ball_sequence(num_frames=15)
+
+    # Establish a real track first.
+    last_meas = None
+    for t, frame, _ in seq:
+        last_meas = tracker.update(frame, t)
+    assert last_meas.state == TrackState.TRACKING.value
+    pre_outlier_pos = (last_meas.x, last_meas.y)
+
+    # Inject a detection far from the established track (a glare on the
+    # far side of the frame), bypassing the real detector.
+    outlier_px = (pre_outlier_pos[0] + 400.0, pre_outlier_pos[1] + 400.0)
+    tracker.detector.detect = lambda frame_bgr: (outlier_px[0], outlier_px[1], 10.0)
+    blank = np.zeros((480, 640, 3), dtype=np.uint8)
+    meas = tracker.update(blank, seq[-1][0] + (1.0 / 30.0))
+
+    assert meas.state == TrackState.COASTING.value
+    assert meas.pixel is None  # rejected, not incorporated
+    assert np.hypot(meas.x - pre_outlier_pos[0], meas.y - pre_outlier_pos[1]) < 50.0
+    assert np.hypot(meas.x - outlier_px[0], meas.y - outlier_px[1]) > 200.0

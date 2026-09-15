@@ -18,6 +18,15 @@ ball_tracker_node:
     min_radius_px: 4.0
     max_radius_px: 200.0
     max_consecutive_misses: 15
+    # Kinematic outlier gate (see ball_tracker.BallTracker docstring):
+    # rejects a detection that implies the ball moved faster than
+    # gate_max_speed (units/s) plus gate_min_jump slack for jitter.
+    # Defaults are generous for bring-up with no plane_mapper (raw pixel
+    # units) — tighten once the plate's real size and max ball speed are
+    # known, so a lighting glare gets rejected without also rejecting a
+    # real fast bounce.
+    gate_max_speed: 3000.0
+    gate_min_jump: 40.0
     publish_debug_image: true
 
 platform_pose_node:

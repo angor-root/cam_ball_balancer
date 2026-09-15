@@ -38,6 +38,8 @@ class BallTrackerNode(Node):
         self.declare_parameter("min_radius_px", 4.0)
         self.declare_parameter("max_radius_px", 200.0)
         self.declare_parameter("max_consecutive_misses", 15)
+        self.declare_parameter("gate_max_speed", 3000.0)
+        self.declare_parameter("gate_min_jump", 40.0)
         self.declare_parameter("publish_debug_image", True)
 
         detector_config = BallDetectorConfig(
@@ -51,6 +53,8 @@ class BallTrackerNode(Node):
             kalman_config=KalmanConfig(),
             plane_mapper=None,  # pixel coords until a homography/calibration is loaded
             max_consecutive_misses=self.get_parameter("max_consecutive_misses").value,
+            gate_max_speed=self.get_parameter("gate_max_speed").value,
+            gate_min_jump=self.get_parameter("gate_min_jump").value,
         )
         self.publish_debug = self.get_parameter("publish_debug_image").value
 
@@ -104,8 +108,7 @@ class BallTrackerNode(Node):
             u, v = result.pixel
             radius = int(result.radius_px or 5)
             cv2.circle(annotated, (int(u), int(v)), radius, (0, 255, 0), 2)
-        status = "OK" if result.valid else "LOST"
-        cv2.putText(annotated, f"ball: {status}", (10, 25),
+        cv2.putText(annotated, f"ball: {result.state}", (10, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         debug_msg = self.bridge.cv2_to_imgmsg(annotated, encoding="bgr8")
         debug_msg.header = header

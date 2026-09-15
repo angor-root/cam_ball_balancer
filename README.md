@@ -18,6 +18,31 @@ develop and test this at a desk with a webcam, no robot needed) and as
 ROS2 nodes/topics/TF, ready to be dropped into the rest of the robot's
 ROS2 stack once it exists.
 
+## Status (2026-09-15)
+
+Repo moved out of `~/curso_mecatronica_pcb/` (a different course's
+folder it was nested under) into its own top-level location and pushed
+public: https://github.com/angor-root/dsm_vision (MIT license).
+
+**Design decision: state machine, not a neural network, for ball-detection
+noise.** The real camera showed intermittent bad detections (lighting
+glare/reflections briefly read as the ball). Considered a learned
+detector instead of tuning the classical HSV pipeline further — decided
+against it: no labeled real-condition dataset exists yet, RPi4 has no
+inference accelerator, and a NN would still need the exact same
+temporal-continuity logic on top of it (something has to decide "trust
+this detection or coast on the prediction"), so it doesn't remove the
+need for a state machine, only adds training cost. Implemented instead:
+`BallTracker` now has an explicit `TrackState`
+(SEARCHING/TRACKING/COASTING/LOST) with a kinematic outlier gate
+(`gate_max_speed`/`gate_min_jump` — deliberately not a Mahalanobis gate
+against the Kalman's own covariance, which underestimates real
+per-frame residuals on curved motion and ends up rejecting good
+detections; see `ball_tracker.py` docstrings). `platform_pose` (the tag
+side) doesn't have an equivalent hold-last-valid layer yet — deferred
+until the plate is physically assembled and tags are actually being
+read, so it's tuned against real dropout behavior instead of guessed.
+
 ## Status (2026-09-14)
 
 Real camera confirmed working end-to-end through ROS2 + RViz (`scripts/

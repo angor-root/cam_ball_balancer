@@ -12,6 +12,8 @@ this package's custom message).
 """
 from __future__ import annotations
 
+import os
+
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
@@ -19,10 +21,24 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from cv_bridge import CvBridge
 from tf2_ros import TransformBroadcaster
+from ament_index_python.packages import get_package_share_directory
 
 from dsm_vision_msgs.msg import PlatformPose as PlatformPoseMsg
 
-from .platform_pose import PlatformPoseEstimator, PlatformPoseConfig
+from .platform_pose import PlatformPoseEstimator, PlatformPoseConfig, CameraIntrinsics
+
+
+def _default_intrinsics_path() -> str:
+    """Ruta al .npz calibrado dentro del paquete instalado (share/dsm_vision/
+    config/), el mismo config/ donde ya viven params.yaml y rviz.rviz (ver
+    setup.py -- data_files hace glob("config/*"), por eso camera_intrinsics.npz
+    solo aparece ahi despues de un `colcon build` que lo recoja).
+    """
+    try:
+        share_dir = get_package_share_directory("dsm_vision")
+    except Exception:
+        return ""
+    return os.path.join(share_dir, "config", "camera_intrinsics.npz")
 
 
 class PlatformPoseNode(Node):
@@ -38,6 +54,7 @@ class PlatformPoseNode(Node):
             [-0.09, -0.09, 0.09, -0.09, 0.09, 0.09, -0.09, 0.09],  # flattened x0,y0,x1,y1,...
         )
         self.declare_parameter("publish_tf", True)
+        self.declare_parameter("camera_intrinsics_path", _default_intrinsics_path())
 
         flat = self.get_parameter("corner_positions_m").value
         positions = tuple((flat[i], flat[i + 1]) for i in range(0, len(flat), 2))
@@ -47,7 +64,20 @@ class PlatformPoseNode(Node):
             corner_marker_ids=tuple(self.get_parameter("corner_marker_ids").value),
             corner_positions_m=positions,
         )
-        self.estimator = PlatformPoseEstimator(config=config, intrinsics=None)
+
+        intrinsics_path = self.get_parameter("camera_intrinsics_path").value
+        intrinsics = None
+        if intrinsics_path and os.path.isfile(intrinsics_path):
+            intrinsics = CameraIntrinsics.load(intrinsics_path)
+            self.get_logger().info(f"Intrinsecos calibrados cargados de {intrinsics_path}")
+        else:
+            self.get_logger().warn(
+                f"No se encontro {intrinsics_path or '(sin ruta)'} -- usando identity_guess() "
+                "sin calibrar. Corre scripts/calibrate_camera.py y recompila (colcon build) "
+                "para que se instale junto a params.yaml."
+            )
+
+        self.estimator = PlatformPoseEstimator(config=config, intrinsics=intrinsics)
         self.plate_frame_id = self.get_parameter("plate_frame_id").value
         self.publish_tf = self.get_parameter("publish_tf").value
 
@@ -59,12 +89,15 @@ class PlatformPoseNode(Node):
         if self.publish_tf:
             self.tf_broadcaster = TransformBroadcaster(self)
 
+        calibrated_note = (
+            "using calibrated intrinsics" if intrinsics is not None
+            else "NOTE: intrinsics not loaded (using an uncalibrated pinhole "
+                 "guess) — theta_x/theta_y will be approximate until "
+                 "scripts/calibrate_camera.py output is wired in"
+        )
         self.get_logger().info(
             f"PlatformPoseNode subscribed to '{image_topic}', "
-            f"publishing plate pose as frame '{self.plate_frame_id}'. "
-            "NOTE: intrinsics not loaded (using an uncalibrated pinhole "
-            "guess) — theta_x/theta_y will be approximate until "
-            "scripts/calibrate_camera.py output is wired in."
+            f"publishing plate pose as frame '{self.plate_frame_id}'. {calibrated_note}."
         )
 
     def _on_image(self, msg: Image) -> None:

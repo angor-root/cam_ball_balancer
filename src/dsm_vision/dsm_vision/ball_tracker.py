@@ -30,6 +30,14 @@ class BallDetectorConfig:
     # Tune with scripts/tune_hsv.py once the real camera/ball arrive.
     hsv_lower: tuple[int, int, int] = (5, 120, 120)
     hsv_upper: tuple[int, int, int] = (18, 255, 255)
+    # Ruido sal-y-pimienta visto en la camara real (2026-09-14): un blur
+    # gaussiano no lo quita bien (es ruido impulsivo, no ruido gaussiano
+    # de fondo) y de hecho lo esparce. cv2.medianBlur si lo quita, porque
+    # reemplaza cada pixel por la mediana de su vecindad -> un pixel
+    # blanco/negro aislado en medio de un fondo uniforme desaparece sin
+    # emborronar bordes reales. Se aplica ANTES del gaussiano (que sigue
+    # sirviendo para el ruido de fondo normal de la camara).
+    median_kernel: int = 5
     blur_kernel: int = 7
     morph_kernel: int = 5
     min_radius_px: float = 4.0
@@ -56,7 +64,8 @@ class BallDetector:
     def detect(self, frame_bgr: np.ndarray) -> Optional[tuple[float, float, float]]:
         """Returns (u, v, radius_px) in pixel coordinates, or None."""
         cfg = self.config
-        blurred = cv2.GaussianBlur(frame_bgr, (cfg.blur_kernel, cfg.blur_kernel), 0)
+        denoised = cv2.medianBlur(frame_bgr, cfg.median_kernel)
+        blurred = cv2.GaussianBlur(denoised, (cfg.blur_kernel, cfg.blur_kernel), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, np.array(cfg.hsv_lower), np.array(cfg.hsv_upper))
 

@@ -18,12 +18,39 @@ develop and test this at a desk with a webcam, no robot needed) and as
 ROS2 nodes/topics/TF, ready to be dropped into the rest of the robot's
 ROS2 stack once it exists.
 
-## Status (2026-08-24)
+## Status (2026-09-14)
 
-No real camera, plate, or printed tags yet — everything below is built
-and tested against synthetic data (see `dsm_vision/synthetic.py`).
+Real camera confirmed working end-to-end through ROS2 + RViz (`scripts/
+publish_camera.py`, generic USB webcam at `/dev/video2` on the dev
+machine, index may differ once wired into the actual PCB/RPi4). No
+plate or printed tags yet — the mechanical platform design is still
+pending (see the CAD work in `plataforma_equilibrio_3rps/`, not
+assembled). `platform_pose`'s tag-based estimation is therefore still
+only exercised against synthetic data.
+
+Added today:
+- **Salt-and-pepper noise fix**: a `cv2.medianBlur` pre-filter in
+  `BallDetector.detect()` (new `BallDetectorConfig.median_kernel`,
+  default 5), applied before the existing Gaussian blur. Median
+  removes impulsive per-pixel noise that a Gaussian blur just smears
+  around instead of removing.
+- **`scripts/calibrate_camera.py`**: standard OpenCV chessboard
+  calibration (interactive webcam capture or batch from a folder of
+  photos). Saves `camera_matrix`/`dist_coeffs` directly in the `.npz`
+  shape `CameraIntrinsics.load()` expects.
+- **`scripts/publish_camera.py`**: real-camera equivalent of
+  `publish_synthetic_video.py` — `cv2.VideoCapture` -> ROS2 Image
+  topic. USB only; a CSI camera (Pi Camera Module) needs a different
+  capture path (libcamera/picamera2), not this script.
+- A calibration chessboard pattern (10x7 squares = 9x6 internal
+  corners, matches both scripts' defaults) to display full-screen on a
+  tablet instead of printing it — flatter than paper. **Measure one
+  square with a ruler**; screen size varies per device so the mm size
+  can't be assumed, it's a required `--square-size-mm` argument.
+
 **Before trusting any of this on the real robot**, go through the
-"When the hardware arrives" checklist near the bottom.
+"When the hardware arrives" checklist near the bottom (now partially
+done — camera capture path is proven, calibration is not).
 
 ## Layout
 
@@ -150,12 +177,16 @@ validated against real hardware; it's a starting point.
 
 ## When the hardware arrives — checklist
 
-1. **Calibrate the camera** (intrinsics + distortion). There's no
-   ready-made script for this yet — standard OpenCV checkerboard
-   calibration (`cv2.calibrateCamera`) — save the result and load it via
-   `platform_pose.CameraIntrinsics.load()` instead of the
-   `identity_guess()` fallback both nodes currently use. Until this is
-   done, `theta_x`/`theta_y` are approximate.
+1. **Calibrate the camera** (intrinsics + distortion) — DONE
+   (2026-09-14): `scripts/calibrate_camera.py` (see above), RMS
+   reprojection error 0.28px. `platform_pose_node.py` now auto-loads
+   `config/camera_intrinsics.npz` on startup (new `camera_intrinsics_path`
+   parameter, defaults to that file inside the installed package share
+   dir — falls back to `identity_guess()` with a warning if it's
+   missing). **Re-run `colcon build` any time you re-calibrate** — the
+   `.npz` only reaches `install/` through the same `data_files` glob
+   that already installs `params.yaml`/`rviz.rviz` (see `setup.py`), so
+   a stale build silently keeps serving the old calibration.
 2. **Tune `hsv_lower`/`hsv_upper`** in `config/params.yaml` against the
    real ball under real lighting (`BallDetector.detect()`'s mask step —
    an interactive `cv2.createTrackbar` script would help here, not

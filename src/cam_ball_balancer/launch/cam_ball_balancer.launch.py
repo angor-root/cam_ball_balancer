@@ -1,8 +1,14 @@
 """Brings up both vision nodes (+ optionally RViz) with the shared params.
 
     ros2 launch cam_ball_balancer cam_ball_balancer.launch.py
-    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py rviz:=false
+    ros2 launch cam_ball_balancer cam_ball_balancer.launch.py rviz:=true
     ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/camera/image_raw
+
+RViz defaults to OFF: this is meant to run headless on the robot's
+compute (e.g. a Pi running Ubuntu Server, no display) most of the time.
+Pass rviz:=true from a machine that actually has a display (e.g. your
+dev laptop, watching the same topics over the network) instead of
+making that the default and having it fail to spawn on the robot.
 
 Both nodes are launched under their own default node name (ball_tracker_node,
 platform_pose_node) so their topics match config/params.yaml as-is; pass a
@@ -30,8 +36,10 @@ def generate_launch_description():
         description="YAML params file for both nodes.",
     )
     rviz_arg = DeclareLaunchArgument(
-        "rviz", default_value="true",
-        description="Launch RViz2 with the bundled config.",
+        "rviz", default_value="false",
+        description="Launch RViz2 with the bundled config. Off by default "
+                     "since this launch file is meant to run headless on "
+                     "the robot's compute most of the time.",
     )
 
     ball_tracker_node = Node(

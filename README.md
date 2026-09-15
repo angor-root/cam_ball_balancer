@@ -116,26 +116,40 @@ tilt angles (via a perspective-correct synthetic renderer — see
 
 ## Quickstart — with ROS2
 
-Built and tested against **ROS2 Jazzy on Ubuntu 24.04** (this dev
-machine). The team's original architecture plan targeted Humble/22.04
-for the RPi4 — the code only uses standard rclpy/cv_bridge APIs so it
-should work unmodified on Humble, but re-run the test suite there
-before trusting it.
+Built and tested against **ROS2 Jazzy on Ubuntu 24.04** — both the dev
+machine and the RPi4 ("the brain", per the team's architecture) run
+this exact combination, so there's no cross-distro risk to worry about.
 
 ```bash
-source /opt/ros/jazzy/setup.bash   # or humble, on the RPi4
+source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
 
 # Full demo with zero hardware: synthetic ball+plate video over ROS2
 python3 scripts/publish_synthetic_video.py &
-ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/synthetic/image_raw
+ros2 launch cam_ball_balancer cam_ball_balancer.launch.py \
+    image_topic:=/synthetic/image_raw rviz:=true
 ```
 
-RViz should open with the debug camera view, the ball as an orange
-sphere, and the plate's TF frame (`plate_link`) tilting under
-`camera_link`. With a real camera, just point `image_topic` at it
-instead (e.g. `usb_cam`'s `/image_raw`, or a CSI driver's topic).
+`rviz:=true` opens RViz with the debug camera view, the ball as an
+orange sphere, and the plate's TF frame (`plate_link`) tilting under
+`camera_link`. **RViz defaults to off** — the launch file is meant to
+run headless on the RPi4 (Ubuntu Server, no display); only pass
+`rviz:=true` on a machine that actually has one.
+
+### Running on the robot (headless RPi4 + real camera)
+
+```bash
+# On the Pi: capture the real USB camera and publish it over ROS2
+python3 scripts/publish_camera.py --camera-index 0 --topic /camera/image_raw &
+ros2 launch cam_ball_balancer cam_ball_balancer.launch.py image_topic:=/camera/image_raw
+
+# On your laptop, same network, no launch needed — just point RViz at the Pi's topics:
+rviz2   # or: ros2 launch cam_ball_balancer cam_ball_balancer.launch.py rviz:=true image_topic:=/camera/image_raw
+```
+ROS2 discovery works automatically over the same LAN (multicast); if
+other ROS2 systems are on the same network, export the same
+`ROS_DOMAIN_ID` on both machines to avoid crosstalk.
 
 ### Topics (all relative — see docstrings)
 

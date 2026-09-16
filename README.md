@@ -151,6 +151,26 @@ ROS2 discovery works automatically over the same LAN (multicast); if
 other ROS2 systems are on the same network, export the same
 `ROS_DOMAIN_ID` on both machines to avoid crosstalk.
 
+**Watching the raw image remotely over WiFi will choke the link.**
+`/camera/image_raw` uncompressed at 640x480@30fps is ~220 Mbps — on the
+RPi4's onboard WiFi (which already drops packets under normal load,
+see `brcmf_proto_bcdc_query_dcmd` timeouts in `dmesg`/`journalctl -k`
+if you go looking) that's enough to starve discovery for every other
+topic too, not just make the image laggy. Measured with `ros2 topic
+bw`: ~0.3 fps actually arriving raw vs. **8-10 fps** once compressed.
+
+Run a compressed republisher **on the Pi** alongside the launch above:
+```bash
+ros2 run image_transport republish raw compressed \
+    --ros-args -r in:=/camera/image_raw -r out/compressed:=/camera/image_raw/compressed
+```
+(needs `ros-jazzy-image-transport-plugins` / `ros-jazzy-compressed-image-transport` installed)
+then point RViz's Image display at **`/camera/image_raw/compressed`**
+instead of the raw topic. `ball_position`/`platform_pose`/`tf` are tiny
+and don't need this — only the image does. Prefer Ethernet over WiFi
+on the Pi whenever it's an option; this is a workaround, not a fix for
+the underlying WiFi flakiness.
+
 ### Topics (all relative — see docstrings)
 
 | Topic | Type | From |

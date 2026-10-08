@@ -25,6 +25,7 @@ setup(
         "console_scripts": [
             "ball_tracker_node = cam_ball_balancer.ball_tracker_node:main",
             "platform_pose_node = cam_ball_balancer.platform_pose_node:main",
+            "vision_node = cam_ball_balancer.vision_node:main",
         ],
     },
 )

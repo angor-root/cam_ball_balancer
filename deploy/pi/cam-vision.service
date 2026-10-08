@@ -1,0 +1,13 @@
+[Unit]
+Description=cam_ball_balancer vision_node (camara + ArUco + pelota -> ROS2)
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=/home/robot/run_vision.sh
+Restart=always
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

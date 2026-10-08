@@ -41,6 +41,8 @@ def main():
             f"No se pudo abrir la camara index={args.camera_index}. "
             "Si es una camara CSI (Pi Camera Module), este script no aplica -- ver docstring."
         )
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FPS, args.fps)
     if args.width:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
     if args.height:
@@ -64,7 +66,9 @@ def main():
             msg.header.stamp = node.get_clock().now().to_msg()
             msg.header.frame_id = args.frame_id
             pub.publish(msg)
-            time.sleep(period_s)
+            # Sin sleep aqui: cap.read() ya bloquea hasta el siguiente
+            # cuadro. Un sleep extra de 1/fps partia la tasa a la mitad
+            # (causa de parte de los ~11 FPS medidos el 2026-09-28).
     except KeyboardInterrupt:
         pass
     finally:

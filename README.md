@@ -261,3 +261,59 @@ validated against real hardware; it's a starting point.
 ## License
 
 MIT.
+
+## Nodo de visión unificado (2026-09-28)
+
+`vision_node` hace captura + pose del plato (ArUco) + pelota en **un solo
+proceso**. La imagen no sale del proceso; hacia ROS solo van datos:
+
+| Tópico / TF | Tipo | Contenido |
+|---|---|---|
+| `ball_position` | `BallPosition` | x, y **en metros, frame del plato** (rayo-plano con la pose actual) |
+| `platform_pose` | `PlatformPose` | theta_x, theta_y |
+| `vision/stats` | `VisionStats` | Hz, jitter, latencia, ms por etapa, cuadros descartados |
+| `debug_image/compressed` | `CompressedImage` | solo si `debug_image_hz > 0` |
+| TF | | `camera_link → plate_link → ball_link` |
+
+Todos los mensajes de un cuadro llevan el mismo stamp (instante de captura).
+
+```bash
+ros2 launch cam_ball_balancer vision.launch.py                  # Pi headless
+ros2 launch cam_ball_balancer vision.launch.py debug_image_hz:=5.0
+ros2 topic echo /vision/stats                                    # desde la laptop
+```
+
+Por qué se veían ~11 FPS: `publish_camera.py` dormía 1/fps **además** de
+esperar el cuadro en `cap.read()` (tasa a la mitad), y OpenCV abría la
+cámara en YUYV (≤10 FPS a 720p por USB 2.0). `camera.py` fuerza MJPG,
+640×480@30, buffer de 1 cuadro con hilo lector (siempre el más reciente),
+y exposición/WB manuales opcionales.
+
+Medir antes de optimizar (sin ROS):
+
+```bash
+python3 scripts/bench_camera.py --device 0 --sweep            # qué formato da 30 Hz
+python3 scripts/bench_camera.py --device 0 --seconds 20 \
+    --params src/cam_ball_balancer/config/params.yaml          # pipeline completo
+```
+
+### Versión C++ (`cam_ball_balancer_cpp`)
+
+Port 1:1 del nodo unificado a C++/rclcpp (mismos tópicos, parámetros y TF).
+Núcleo sin ROS en `vision_core` (tests gtest: `build/cam_ball_balancer_cpp/test_vision_core`).
+
+```bash
+sudo apt install libopencv-contrib-dev          # módulo ArUco en C++ (OpenCV 4.6)
+colcon build --packages-up-to cam_ball_balancer_cpp
+ros2 launch cam_ball_balancer_cpp vision.launch.py device:=0
+ros2 run cam_ball_balancer_cpp bench_vision --device 0 --sweep      # formatos de cámara
+ros2 run cam_ball_balancer_cpp bench_vision --device 0 --seconds 20 # pipeline completo
+ros2 run cam_ball_balancer_cpp bench_vision --image cuadro.png      # solo cómputo
+```
+
+Intrínsecos en `config/camera_intrinsics.yml` (formato cv::FileStorage,
+convertido del `.npz`; si se recalibra, regenerarlo).
+
+Medición en laptop x86 (mismo cuadro, 1000 iteraciones): Python 3.01 ms,
+C++ 3.19 ms por cuadro. El cómputo está dentro de OpenCV en ambos casos;
+C++ gana en publicación (0.07 vs 0.28 ms), memoria y ausencia de GIL.
